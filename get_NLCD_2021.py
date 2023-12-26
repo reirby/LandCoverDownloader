@@ -21,15 +21,15 @@ def main():
    
    # Extract command-line arguments
     shapefile_path = sys.argv[1]
-    cell_size = sys.argv[2]    
-   
-    # Check if the second argument is a valid float
-    try:
-        cell_size = float(cell_size)
-    except ValueError:
-        print("Error: The second parameter must be a valid float.")
-        sys.exit(1)
-
+    if len(sys.argv) == 3:
+        cell_size = sys.argv[2]
+        try:
+            cell_size = float(cell_size)
+        except ValueError:
+            print("Error: The second parameter must be a valid float.")
+            sys.exit(1)
+    else:
+        cell_size = None
 
     get_LC(shapefile_path, cell_size)
 
