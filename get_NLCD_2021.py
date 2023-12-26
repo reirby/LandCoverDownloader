@@ -1,5 +1,5 @@
 """
-Download NLCD_2021_Land_Cover_L48 landcover from www.mrlc.gov WCS 
+Download NLCD_2021_Land_Cover_L48 (US) landcover from www.mrlc.gov WCS 
 for the extent of the input SHP file. The output is a tif image in 4326 coordinate system.
 The target spatial resolution can be specified in degrees (4326) as an optional parameter.
 Images for large extents are downloaded in tiles and then merged together
@@ -16,7 +16,7 @@ import sys
 def main():
     # Check if the correct number of arguments is provided
     if len(sys.argv) != 3 and len(sys.argv) != 2:
-        print("Usage: python get_NLCD_2021.py shp-file  cell-size-in-degrees")
+        print("Usage: python get_NLCD_2021.py shp-file  cell-size-in-degrees(optional)")
         sys.exit(1)  # Exit with a non-zero status to indicate an error
    
    # Extract command-line arguments
@@ -153,6 +153,23 @@ def mosaic_tifs(input_IMGs, output_mosaic):
     # Mosaic the input files
     gdal.Warp(output_file, input_files, options=warp_options)
     print(f"Mosaic created: {output_mosaic}")
+
+def reclassify_tif(input_tif, output_tif):
+    # reclass_table (dict): A dictionary representing the reclassification table. originial value: new value
+
+    reclass_table = {11:1,21:2,22:2,23:2,24:2,31:3,32:3,33:3,12:3,42:4,41:5,43:4,90:4,51:6,52:6,71:7,85:7,95:7,61:8,81:8,82:8,83:8,84:8}
+    palette = {1: (85,102,170,255),2: (117,107,177,255),3: (221,204,102,255),4: (102,136,34,255),5: (85,170,34,255),6: (153,187,85,255),7: (68,170,136,255),8: (17,119,51,255)}
+    color_table = gdal.ColorTable()
+
+    for key, val in palette.items():
+        color_table.SetColorEntry(key, val)
+
+    # Convert the reclassification table to a string
+    reclass_formula = "+".join([f"(A=={key})*{value}" for key, value in reclass_table.items()]) 
+    # ds = gdal_calc.Calc(calc="(A-B)/(A+B)", A="nir.tif", A_band=1, B="red.tif", B_band = 1, outfile="ndvi.tif") 
+
+    ds = gdal_calc.Calc(reclass_formula, A=input_tif, outfile=output_tif, NoDataValue=0, quiet=True,color_table=color_table)
+    ds = None
 
 def get_bbox_4326(shapefile_path):
     target_srs = osr.SpatialReference()
