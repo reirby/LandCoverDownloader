@@ -33,8 +33,6 @@ def main():
 
     get_LC(shapefile_path, cell_size)
 
-
-
 def get_LC(shapefile_path, spatial_resolution=None):
     min_x, max_x, min_y, max_y = get_bbox_4326(shapefile_path)
     spanX = abs(max_x - min_x)
@@ -43,7 +41,7 @@ def get_LC(shapefile_path, spatial_resolution=None):
     folder_path = os.path.dirname(shapefile_path)
     file_name = os.path.basename(shapefile_path)
     
-    if area <= 9:
+    if area <= 9: #9 square degrees
         #just get the whole image
         outImg = os.path.join(folder_path, file_name[:-4]+'.tif')
         wcs_url = f'https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wcs?service=WCS&version=2.0.1&request=getcoverage&coverageid=NLCD_2021_Land_Cover_L48&subset=Lat({min_y},{max_y})&subset=Long({min_x},{max_x})&SubsettingCRS=http://www.opengis.net/def/crs/EPSG/0/4326'
@@ -69,7 +67,7 @@ def get_LC(shapefile_path, spatial_resolution=None):
                 failedImg.append(i)
             else:
                 tilePaths.append(outImg)
-        #try one more time
+        #try downloading missed images one more time
         if len(failedImg) > 0:
             for i in failedImg:
                 min_x, max_x, min_y, max_y = tileExtents[i]
@@ -112,18 +110,13 @@ def split_extent(min_x, max_x, min_y, max_y):
     return subextents
 
 def get_IMG(wcs_url, fname, spatial_resolution=None):
-
-    # Open the WCS dataset
     ds = gdal.Open(wcs_url)
-
     # Check if the dataset is successfully opened
     if ds is None:
         print('Failed to open WMS dataset')
         return 'fail'
     else:
-        # Define the output file format
         output_format = 'GTiff'
-
         # Create output dataset
         driver = gdal.GetDriverByName(output_format)
 
@@ -156,18 +149,16 @@ def mosaic_tifs(input_IMGs, output_mosaic):
 
 def reclassify_tif(input_tif, output_tif):
     # reclass_table (dict): A dictionary representing the reclassification table. originial value: new value
-
     reclass_table = {11:1,21:2,22:2,23:2,24:2,31:3,32:3,33:3,12:3,42:4,41:5,43:4,90:4,51:6,52:6,71:7,85:7,95:7,61:8,81:8,82:8,83:8,84:8}
     palette = {1: (85,102,170,255),2: (117,107,177,255),3: (221,204,102,255),4: (102,136,34,255),5: (85,170,34,255),6: (153,187,85,255),7: (68,170,136,255),8: (17,119,51,255)}
     color_table = gdal.ColorTable()
-
+    
     for key, val in palette.items():
         color_table.SetColorEntry(key, val)
 
     # Convert the reclassification table to a string
     reclass_formula = "+".join([f"(A=={key})*{value}" for key, value in reclass_table.items()]) 
     # ds = gdal_calc.Calc(calc="(A-B)/(A+B)", A="nir.tif", A_band=1, B="red.tif", B_band = 1, outfile="ndvi.tif") 
-
     ds = gdal_calc.Calc(reclass_formula, A=input_tif, outfile=output_tif, NoDataValue=0, quiet=True,color_table=color_table)
     ds = None
 
@@ -175,12 +166,10 @@ def get_bbox_4326(shapefile_path):
     target_srs = osr.SpatialReference()
     target_srs.ImportFromEPSG(4326)
     target_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-    srid_t = target_srs.GetAuthorityCode(None)
-    # print(srid_t)  
+    srid_t = target_srs.GetAuthorityCode(None) 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     in_memory = ogr.GetDriverByName('Memory')
 
-    
     # Open the shapefile
     dataset = driver.Open(shapefile_path)
 
@@ -197,20 +186,15 @@ def get_bbox_4326(shapefile_path):
         if srid_s != srid_t:
             # Create the target shapefile
             target_ds = in_memory.CreateDataSource('')
-
-            
             # Create the target layer
             target_layer = target_ds.CreateLayer('reprojected_layer', geom_type=layer.GetGeomType())
-            
             # Create a transformation from the layer's spatial reference to EPSG:4326
             transform = osr.CoordinateTransformation(layer_srs, target_srs)
 
             # Apply the coordinate transformation to each feature and add to the target layer
             for feature in layer:
                 geometry = feature.GetGeometryRef()
-                # print(geometry)
                 geometry.Transform(transform)
-                # print(geometry)
                 
                 target_feature = ogr.Feature(target_layer.GetLayerDefn())
                 target_feature.SetGeometry(geometry)
@@ -219,11 +203,8 @@ def get_bbox_4326(shapefile_path):
 
             # Get the extent
             minX, maxX, minY, maxY = target_layer.GetExtent()
-            # print(target_layer.GetExtent())
         else:
-            # print('no trans needed')
             minX, maxX, minY, maxY = layer.GetExtent()
-            # print(layer.GetExtent())
 
         # Close the dataset
         dataset = None
