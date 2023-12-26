@@ -148,7 +148,7 @@ def mosaic_tifs(input_IMGs, output_mosaic):
     # Output mosaic file
     output_file = output_mosaic
     # Warp options - here we set the format to GeoTIFF
-    warp_options = gdal.WarpOptions(format='GTiff', resampleAlg='near', creationOptions  = "COMPRESS=LZW")
+    warp_options = gdal.WarpOptions(format='GTiff', resampleAlg='near', creationOptions=['COMPRESS=LZW'])
 
     # Mosaic the input files
     gdal.Warp(output_file, input_files, options=warp_options)
