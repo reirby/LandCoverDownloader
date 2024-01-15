@@ -35,6 +35,7 @@ def main():
 
 def get_land_cover(shapefile_path, spatial_resolution=None):
     ext = get_bbox_4326(shapefile_path)
+    min_x, max_x, min_y, max_y = ext
     spanX = abs(max_x - min_x)
     spanY = abs(max_y - min_y)
     area = spanX*spanY
@@ -45,6 +46,7 @@ def get_land_cover(shapefile_path, spatial_resolution=None):
         #just get the whole image
         outImg = os.path.join(folder_path, file_name[:-4]+'.tif')
         wcs_url = get_url(ext)
+        print("Getting the image...")
         get_IMG(wcs_url,outImg,spatial_resolution)
     else:
         #split extent to tiles of ~ 1sq deg
