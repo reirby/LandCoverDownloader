@@ -173,7 +173,7 @@ def get_url(extent):
 def reproject_layer(layer,layer_srs,target_srs):
     in_memory_driver = ogr.GetDriverByName('Memory')
     # Create the target shapefile
-    target_ds = in_memory.CreateDataSource('')
+    target_ds = in_memory_driver.CreateDataSource('')
     # Create the target layer
     target_layer = target_ds.CreateLayer('reprojected_layer', geom_type=layer.GetGeomType())
     # Create a transformation from the layer's spatial reference to EPSG:4326
@@ -189,7 +189,7 @@ def reproject_layer(layer,layer_srs,target_srs):
         target_layer.CreateFeature(target_feature)
         target_feature = None  # Release the target feature
     
-    target_ds = None
+    #target_ds = None
     return target_layer
 
 def get_bbox_4326(shapefile_path):
