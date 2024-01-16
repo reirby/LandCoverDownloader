@@ -1,0 +1,5 @@
+GDAL==3.6.2
+mkl-fft
+mkl-random
+mkl-service==2.4.0
+numpy
