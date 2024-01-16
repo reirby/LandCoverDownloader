@@ -36,51 +36,51 @@ def main():
 def get_land_cover(shapefile_path, spatial_resolution=None):
     ext = get_bbox_4326(shapefile_path)
     min_x, max_x, min_y, max_y = ext
-    spanX = abs(max_x - min_x)
-    spanY = abs(max_y - min_y)
-    area = spanX*spanY
+    span_x = abs(max_x - min_x)
+    span_y = abs(max_y - min_y)
+    area = span_x*span_y
     folder_path = os.path.dirname(shapefile_path)
     file_name = os.path.basename(shapefile_path)
     
     if area <= 9: #9 square degrees
         #just get the whole image
-        outImg = os.path.join(folder_path, file_name[:-4]+'.tif')
+        out_img = os.path.join(folder_path, file_name[:-4]+'.tif')
         wcs_url = get_url(ext)
         print("Getting the image...")
-        get_IMG(wcs_url,outImg,spatial_resolution)
+        get_IMG(wcs_url,out_img,spatial_resolution)
     else:
         #split extent to tiles of ~ 1sq deg
-        tileExtents = split_extent(ext, spatial_resolution)
-        failedImg = []
-        tilePaths = []
+        tile_extents = split_extent(ext, spatial_resolution)
+        failed_img = []
+        tile_paths = []
         for i, ext in enumerate(tileExtents):
-            print(f'Getting image {i+1} out of {len(tileExtents)}')    
+            print(f'Getting image {i+1} out of {len(tile_extents)}')    
             wcs_url = get_url(ext)
-            outFolder = os.path.join(folder_path, file_name[:-4])
-            if not os.path.exists(outFolder):
-                os.makedirs(outFolder)
-            outImg = os.path.join(outFolder, file_name[:-4]+f'_{i}.tif')
-            result = get_IMG(wcs_url, outImg, spatial_resolution)
+            out_folder = os.path.join(folder_path, file_name[:-4])
+            if not os.path.exists(out_folder):
+                os.makedirs(out_folder)
+            out_img = os.path.join(out_folder, file_name[:-4]+f'_{i}.tif')
+            result = get_IMG(wcs_url, out_img, spatial_resolution)
             if result == 'fail':
-                failedImg.append(i)
+                failed_img.append(i)
             else:
-                tilePaths.append(outImg)
+                tile_paths.append(out_img)
         #try downloading missed images one more time
-        if len(failedImg) > 0:
-            for i in failedImg:
+        if len(failed_img) > 0:
+            for i in failed_img:
                 ext = tileExtents[i]
                 min_x, max_x, min_y, max_y = ext
-                outImg = os.path.join(outFolder, file_name[:-4]+f'_{i}.tif')
+                out_img = os.path.join(out_folder, file_name[:-4]+f'_{i}.tif')
                 wcs_url = get_url(ext)
-                result = get_IMG(wcs_url, outImg,spatial_resolution)
+                result = get_IMG(wcs_url, out_img,spatial_resolution)
                 if result == 'success':
-                    tilePaths.append(outImg)
+                    tile_paths.append(out_img)
                 else:
                     print(f"Something is wrong. Can't get the file with {wcs_url}.")
                     
         #mosaic tiles back together
-        output_mosaic = os.path.join(outFolder, file_name[:-4]+'_mosaic.tif')
-        build_mosaic(tilePaths, output_mosaic)
+        output_mosaic = os.path.join(out_folder, file_name[:-4]+'_mosaic.tif')
+        build_mosaic(tile_paths, output_mosaic)
             
 def split_extent(extent, spatial_resolution):
     # Size of each subextent (approximately 1 square degree)
@@ -98,16 +98,16 @@ def split_extent(extent, spatial_resolution):
     num_rows = math.ceil((max_y - min_y) / subextent_size)
     num_cols = math.ceil((max_x - min_x) / subextent_size)
 
-    stepX = (max_x - min_x)/num_cols
-    stepY = round((max_y - min_y)/num_rows,8)
+    step_x = (max_x - min_x)/num_cols
+    step_y = round((max_y - min_y)/num_rows,8)
     
     for row in range(num_rows):
         for col in range(num_cols):
             # Calculate the bounds of the subextent
-            subextent_min_x = round((min_x + col * stepX) - tile_margin,8)
-            subextent_max_x = round((min_x + (col + 1) * stepX) + tile_margin,8)
-            subextent_min_y = round((min_y + row * stepY) - tile_margin,8)
-            subextent_max_y = round((min_y + (row + 1) * stepY) + tile_margin,8)
+            subextent_min_x = round((min_x + col * step_x) - tile_margin,8)
+            subextent_max_x = round((min_x + (col + 1) * step_x) + tile_margin,8)
+            subextent_min_y = round((min_y + row * step_y) - tile_margin,8)
+            subextent_max_y = round((min_y + (row + 1) * step_y) + tile_margin,8)
 
             # Add the subextent to the list
             subextents.append((subextent_min_x, subextent_max_x, subextent_min_y, subextent_max_y))
@@ -170,12 +170,12 @@ def get_url(extent):
     url = f'https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wcs?service=WCS&version=2.0.1&request=getcoverage&coverageid=NLCD_2021_Land_Cover_L48&subset=Lat({min_y},{max_y})&subset=Long({min_x},{max_x})&SubsettingCRS=http://www.opengis.net/def/crs/EPSG/0/4326'
     return url
     
-def reproject_layer(layer,layer_srs,target_srs):
+def get_4326_extent(layer,layer_srs,target_srs):
     in_memory_driver = ogr.GetDriverByName('Memory')
     # Create the target shapefile
-    target_ds = in_memory_driver.CreateDataSource('')
+    temp_ds = in_memory_driver.CreateDataSource('')
     # Create the target layer
-    target_layer = target_ds.CreateLayer('reprojected_layer', geom_type=layer.GetGeomType())
+    target_layer = temp_ds.CreateLayer('reprojected_layer', geom_type=layer.GetGeomType())
     # Create a transformation from the layer's spatial reference to EPSG:4326
     transform = osr.CoordinateTransformation(layer_srs, target_srs)
 
@@ -183,16 +183,18 @@ def reproject_layer(layer,layer_srs,target_srs):
     for feature in layer:
         geometry = feature.GetGeometryRef()
         geometry.Transform(transform)
-        
+
         target_feature = ogr.Feature(target_layer.GetLayerDefn())
         target_feature.SetGeometry(geometry)
         target_layer.CreateFeature(target_feature)
         target_feature = None  # Release the target feature
     
-    #target_ds = None
-    return target_layer
+    extent = target_layer.GetExtent()
+    target_ds = None
+    return extent
 
 def get_bbox_4326(shapefile_path):
+    #set the CRS for the bounding box
     target_srs = osr.SpatialReference()
     target_srs.ImportFromEPSG(4326)
     target_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
@@ -211,11 +213,9 @@ def get_bbox_4326(shapefile_path):
         # Get the spatial reference
         layer_srs = layer.GetSpatialRef()
         layer_srid = layer_srs.GetAuthorityCode(None)
-        # reproject to 4326 if shp is in different CRS
+        # reproject to 4326 and get the extent if shp is in different CRS
         if layer_srid != target_srid:
-            proj_layer = reproject_layer(layer,layer_srs,target_srs)
-            # Get the extent
-            extent = proj_layer.GetExtent()
+            extent = get_4326_extent(layer,layer_srs,target_srs)
         else:
             extent = layer.GetExtent()
 
