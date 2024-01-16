@@ -7,7 +7,7 @@ The parameters are:
 The output is a TIF file in epsg:4326.
 
 
-##### The script requires GDAL!
+#### The script requires GDAL!
 
 Please make sure you have necessary packages by using
 ```
