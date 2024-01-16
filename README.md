@@ -1,6 +1,6 @@
 # LandCoverDownloader
 A script to download NLCD 2021 land cover data for the contiguous US (https://www.mrlc.gov/data/nlcd-2021-land-cover-conus) using the extent of the provided shp file.
-The parameters are:
+The parameters are:   
   a path to the target shape file 
   target spatial resolution in degrees (epsg:4326) [optional]
 
